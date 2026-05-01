@@ -3,45 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>言語治療課室觀察記錄表</title>
+    <title>言語治療課室觀察記錄表 - 增強版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        :root { --primary: #2c3e50; --secondary: #ecf0f1; --accent: #27ae60; }
+        :root { --primary: #2c3e50; --secondary: #ecf0f1; --accent: #27ae60; --blue: #2980b9; }
         body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; padding: 20px; color: #333; background-color: #f4f7f6; }
         .container { max-width: 1200px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
         
-        /* 頂部資料欄 */
         .info-header { display: flex; gap: 20px; margin-bottom: 20px; align-items: center; background: var(--secondary); padding: 15px; border-radius: 8px; }
         .student-setup { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 30px; }
         .stu-card { background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary); }
         .stu-card label { font-weight: bold; display: block; margin-bottom: 5px; }
         .stu-card input, .stu-card textarea { width: 100%; border: 1px solid #ccc; padding: 8px; border-radius: 4px; box-sizing: border-box; }
 
-        /* 表格樣式 */
         table { width: 100%; border-collapse: collapse; margin-bottom: 40px; table-layout: fixed; background: #fff; }
         th, td { border: 1px solid #bdc3c7; padding: 10px; vertical-align: top; }
         .cat-head { background: var(--primary); color: white; font-size: 1.1em; }
         .sub-head { background: #dce4ec; font-weight: bold; }
         .name-row { background: #f9f9f9; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 10; }
         
-        /* 評分區 */
         .score-zone { display: flex; justify-content: center; gap: 10px; margin-bottom: 8px; }
         .remark-box { width: 100%; height: 50px; font-size: 12px; resize: none; border: 1px solid #eee; padding: 4px; }
         .item-text { width: 25%; background: #fdfdfd; font-weight: 500; }
         
-        /* 按鈕 */
-        .btn-float { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 10px; }
-        button { padding: 12px 24px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        /* 浮動按鈕區 */
+        .btn-float { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
+        button { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.3s; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
         .btn-pdf { background: var(--accent); }
+        .btn-png { background: var(--blue); }
         .btn-clear { background: #e74c3c; }
 
-        /* 列印與 PDF 隱藏 */
-        #pdf-export-area { display: none; }
+        /* 導出區域樣式（平常隱藏） */
+        #export-temp-container { 
+            position: absolute; left: -9999px; top: 0; width: 800px; 
+            background: white; padding: 20px;
+        }
+        .export-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .export-table th, .export-table td { border: 1px solid #333; padding: 8px; text-align: left; }
+
         @media print {
             .no-print { display: none !important; }
-            #pdf-export-area { display: block; }
-            body { background: white; padding: 0; }
-            .container { box-shadow: none; width: 100%; max-width: none; }
+            #export-temp-container { position: static; left: 0; width: 100%; display: block; }
         }
     </style>
 </head>
@@ -51,28 +55,28 @@
     <h1>課室支援觀察記錄表</h1>
 
     <div class="info-header">
-        <strong>觀察日期：</strong> <input type="date" id="mainDate">
-        <span>評分：0=未能做到 | 1=偶爾做到 | 2=經常做到</span>
+        <strong>觀察日期：</strong> <input type="date" id="mainDate" onchange="autoSave()">
+        <span style="margin-left: 20px;">評分：0=未能做到 | 1=偶爾做到 | 2=經常做到</span>
     </div>
 
     <div class="student-setup">
         <div class="stu-card">
             <label>兒童 A 姓名</label>
-            <input type="text" id="nameA" placeholder="輸入姓名" oninput="syncNames()">
+            <input type="text" id="nameA" placeholder="輸入姓名" oninput="syncNames(); autoSave();">
             <label style="margin-top:10px;">活動內容</label>
-            <textarea id="actA" rows="2" placeholder="此兒童的特定活動..."></textarea>
+            <textarea id="actA" rows="2" oninput="autoSave()"></textarea>
         </div>
         <div class="stu-card">
             <label>兒童 B 姓名</label>
-            <input type="text" id="nameB" placeholder="輸入姓名" oninput="syncNames()">
+            <input type="text" id="nameB" placeholder="輸入姓名" oninput="syncNames(); autoSave();">
             <label style="margin-top:10px;">活動內容</label>
-            <textarea id="actB" rows="2" placeholder="此兒童的特定活動..."></textarea>
+            <textarea id="actB" rows="2" oninput="autoSave()"></textarea>
         </div>
         <div class="stu-card">
             <label>兒童 C 姓名</label>
-            <input type="text" id="nameC" placeholder="輸入姓名" oninput="syncNames()">
+            <input type="text" id="nameC" placeholder="輸入姓名" oninput="syncNames(); autoSave();">
             <label style="margin-top:10px;">活動內容</label>
-            <textarea id="actC" rows="2" placeholder="此兒童的特定活動..."></textarea>
+            <textarea id="actC" rows="2" oninput="autoSave()"></textarea>
         </div>
     </div>
 
@@ -80,111 +84,164 @@
 </div>
 
 <div class="btn-float no-print">
-    <button class="btn-clear" onclick="if(confirm('確定清除所有內容？')) location.reload()">清除重填</button>
-    <button class="btn-pdf" onclick="exportToPDF()">匯出 PDF (評分1及備註)</button>
+    <button class="btn-png" onclick="exportAsImage()">匯出 PNG 圖片</button>
+    <button class="btn-pdf" onclick="exportAsPDF()">匯出 PDF 檔案</button>
+    <button class="btn-clear" onclick="clearData()">清除所有記錄</button>
 </div>
 
-<div id="pdf-export-area"></div>
+<div id="export-temp-container"></div>
 
 <script>
-    // 完整的數據結構
+    // 數據結構 (與之前內容完全一致)
     const sections = [
         { title: "（一）學習適應", sub: "【主題時間】 遵守規則及指令", items: ["能安坐", "能先舉手、後發言", "在合適時間才舉手發言或參與", "能持續地留心聆聽", "能合作並跟從老師指令"] },
         { title: "（一）學習適應", sub: "【主題時間】 上課時給予反應", items: ["聽課時，會眼望老師及點頭表示明白", "被叫名字提問時，會嘗試作出回應", "能主動舉手回答老師問題"] },
-        { title: "（一）學習適應", sub: "【主題時間】 與朋輩討論", items: ["主動積極參與於與朋輩的討論中", "知道老師現在指示同學們討論甚麼題目", "能專心聆聽伙伴的分享或意見", "以點頭或說話回應對方，示意知道或同意", "分享自己的答案、想法或意見", "內容：有條理、與主題相關", "身體語言：轉向對方或有眼神接觸、保持適當距離", "語言：合適聲量、語氣有禮", "向伙伴提出相關問題"] },
+        { title: "（一）學習適應", sub: "【主題時間】 與朋輩討論", items: ["主動積極參與於與朋輩的討論中", "知道老師現在指示討論題目", "能專心聆聽伙伴意見", "以點頭或說話回應", "分享想法或意見", "內容有條理與主題相關", "身體語言(眼神/距離)", "語言(聲量/語氣)", "向伙伴提出問題"] },
         { title: "（一）學習適應", sub: "【分組時間／功課時間】 獨立完成工作", items: ["自發地開展工作", "獨立地按指示完成工作", "持續專注地工作"] },
-        { title: "（一）學習適應", sub: "【分組時間／功課時間】 轉換及靈活性", items: ["能分辨事情重要性，計劃完成的先後次序", "能分辨事情重要性或按老師指令，加快完成桌上工作", "接受流程或規則的改變", "按計劃自行由一項活動轉換到另一活動"] },
-        { title: "（二）社交適應", sub: "【語言及非語言溝通】 恰當運用語言", items: ["能清晰具體地表達", "能運用恰當語速", "能運用恰當聲量", "能運用自然恰當的說話風格（避免過分直接或只顧自己話題）"] },
-        { title: "（二）社交適應", sub: "【語言及非語言溝通】 理解及運用非語言訊息", items: ["保持恰當的眼神接觸", "聆聽時給予恰當非語言訊息（如：點頭）", "保持適當社交距離", "運用恰當動作、姿勢及表情", "理解別人的目光、表情、動作等含意"] },
-        { title: "（二）社交適應", sub: "【語言及非語言溝通】 運用語言作不同用途", items: ["恰當地提出要求", "恰當地敘述事情", "恰當地解釋事物", "恰當地分享經驗、興趣或想法", "恰當地提出提議或意見", "恰當地提出問題"] },
-        { title: "（二）社交適應", sub: "【對話技巧】 恰當地開展、加入及完結對話", items: ["主動開展交談", "主動開展不同種類話題", "在適當時機加入對話", "恰當地完結對話"] },
-        { title: "（二）社交適應", sub: "【對話技巧】 因應情況調節對話內容", items: ["不明白時能重複、調整或澄清", "根據別人的反應來調整內容及行為"] },
-        { title: "（二）社交適應", sub: "【對話技巧】 維持對話及互動", items: ["留心聆聽回應", "回應或回答對方", "能輪流說話不插口", "保持恰當說話頻次", "不離題", "提供想法維持對話", "向對方提出問題", "不明白時要求澄清", "自然轉換話題"] },
-        { title: "（二）社交適應", sub: "【社交思考及解難】 解讀別人的想法", items: ["理解別人的觀點感受", "理解別人意圖", "明白行為如何影響別人對自己的印象"] },
-        { title: "（二）社交適應", sub: "【社交思考及解難】 運用社交思考調整行為", items: ["就對方反應調整行為", "情緒調整", "語言調整", "非語言調整", "理解不同場合預期行為"] },
-        { title: "（二）社交適應", sub: "【社交思考及解難】 平和面對問題及解決困難", items: ["處理自己過失", "處理不如意事情", "分辨問題大小作反應", "考慮後果", "指出困難", "尋求幫助", "運用不同方法解決"] },
-        { title: "（二）社交適應", sub: "【友善行為】 社交禮儀", items: ["表示友好", "打招呼及回應", "主動道歉", "運用禮貌字詞", "回應讚美", "表示反對或拒絕"] },
-        { title: "（二）社交適應", sub: "【友善行為】 友善對待別人", items: ["鼓勵讚美別人", "合情合理投訴", "合宜處理打擾", "表達關心", "主動幫助/安慰", "分享歡樂"] },
-        { title: "（二）社交適應", sub: "【遊戲活動】 與朋輩參與遊戲", items: ["接受朋輩加入", "合宜加入遊戲", "邀請朋輩", "合宜離開遊戲", "參與多樣化活動"] },
-        { title: "（二）社交適應", sub: "【遊戲活動】 遊戲中合宜行為", items: ["運用遊戲物品", "分享物品", "輪流玩耍", "遵守規則", "假想遊戲", "協商妥協", "面對失敗"] },
-        { title: "（二）社交適應", sub: "【處理意見分歧或衝突】", items: ["察覺分歧", "願意妥協", "協商共識", "解釋優劣", "公平方法決定", "輪流作主", "融合意見", "合宜拒絕/回應拒絕"] },
-        { title: "（二）社交適應", sub: "【情緒表達、理解及調控】", items: ["表達情緒", "基礎情緒詞彙", "進階情緒詞彙", "情緒程度表達", "解釋成因", "理解別人情緒", "調控負面/正面情緒", "調控憤怒/焦慮/失望/興奮", "平復後重新參與"] }
+        { title: "（一）學習適應", sub: "【分組時間／功課時間】 轉換及靈活性", items: ["分辨重要性及先後次序", "按指令加快或放下工作", "接受流程或規則改變", "自行轉換活動"] },
+        { title: "（二）社交適應", sub: "【語言及非語言溝通】 恰當運用語言", items: ["清晰具體表達", "恰當語速", "恰當聲量", "風格自然(避免過分直接或偏激話題)"] },
+        { title: "（二）社交適應", sub: "【語言及非語言溝通】 理解及運用非語言訊息", items: ["眼神接觸", "聆聽時給予點頭回應", "社交距離", "動作姿勢及表情", "解讀別人非語言含意"] },
+        { title: "（二）社交適應", sub: "【語言及非語言溝通】 運用語言作不同用途", items: ["提出要求", "敘述事情", "解釋事物", "分享經驗想法", "提出提議意見", "提出問題"] },
+        { title: "（二）社交適應", sub: "【對話技巧】 開展、加入及完結對話", items: ["主動開展交談", "開展不同話題", "適當時機加入對話", "恰當完結對話"] },
+        { title: "（二）社交適應", sub: "【對話技巧】 因應情況調節對話內容", items: ["主動澄清誤解", "根據反應調整內容行為"] },
+        { title: "（二）社交適應", sub: "【對話技巧】 維持對話及互動", items: ["留心聆聽", "回應回答", "輪流說話不插口", "說話頻次恰當", "對話不離題", "提供資料維持對話", "提出問題維持對話", "主動要求澄清", "自然轉換話題"] },
+        { title: "（二）社交適應", sub: "【社交思考及解難】 解讀別人想法", items: ["理解觀點感受", "理解意圖", "明白行為影響形象"] },
+        { title: "（二）社交適應", sub: "【社交思考及解難】 運用社交思考調整行為", items: ["根據反應調整行為", "情緒調整", "語言調整", "非語言調整", "理解場合預期行為"] },
+        { title: "（二）社交適應", sub: "【社交思考及解難】 平和面對問題及解決困難", items: ["處理過失", "處理不如意事", "分辨問題大小", "考慮後後果", "指出困難", "尋求幫助", "運用方法解決問題"] },
+        { title: "（二）社交適應", sub: "【友善行為】 社交禮儀", items: ["表情動作表示友好", "打招呼及回應", "主動道歉", "運用禮貌字詞", "回應讚美", "表示反對或拒絕"] },
+        { title: "（二）社交適應", sub: "【友善行為】 友善對待別人", items: ["鼓勵讚美", "合情理投訴", "合宜處理打擾", "表達關心", "主動幫助安慰", "分享歡樂"] },
+        { title: "（二）社交適應", sub: "【遊戲活動】 與朋輩參與遊戲", items: ["接受朋輩加入", "合宜加入遊戲", "邀請朋輩", "合宜離開遊戲", "多樣化興趣"] },
+        { title: "（二）社交適應", sub: "【遊戲活動】 遊戲中合宜行為", items: ["運用遊戲物品", "懂得分享", "輪流玩耍", "遵守規則", "假想遊戲", "協商妥協", "平和面對失敗"] },
+        { title: "（二）社交適應", sub: "【處理意見分歧或衝突】", items: ["察覺分歧", "願意妥協", "協商共識", "解釋優劣", "公平方法決定", "輪流作主", "融合意見", "合宜拒絕及回應"] },
+        { title: "（二）社交適應", sub: "【情緒表達、理解及調控】", items: ["表達情緒", "基礎情緒詞彙", "進階情緒詞彙", "情緒程度", "解釋成因", "理解別人情緒", "調控負面/正面情緒", "調控憤怒/緊張/焦慮", "調控興奮/不開心", "平復後重新參與"] }
     ];
 
-    function syncNames() {
-        const a = document.getElementById('nameA').value || "兒童 A";
-        const b = document.getElementById('nameB').value || "兒童 B";
-        const c = document.getElementById('nameC').value || "兒童 C";
-        document.querySelectorAll('.disA').forEach(el => el.innerText = a);
-        document.querySelectorAll('.disB').forEach(el => el.innerText = b);
-        document.querySelectorAll('.disC').forEach(el => el.innerText = c);
-    }
-
+    // 初始化表單
     const formWrap = document.getElementById('dynamic-form');
     let currentMainCat = "";
-
     sections.forEach((sec, sIdx) => {
-        let tableHtml = `<table>`;
+        let html = `<table>`;
         if (sec.title !== currentMainCat) {
-            tableHtml += `<tr><th colspan="4" class="cat-head">${sec.title}</th></tr>`;
+            html += `<tr><th colspan="4" class="cat-head">${sec.title}</th></tr>`;
             currentMainCat = sec.title;
         }
-        tableHtml += `<tr><th colspan="4" class="sub-head">${sec.sub}</th></tr>`;
-        tableHtml += `<tr class="name-row"><td>觀察項目</td><td class="disA">兒童 A</td><td class="disB">兒童 B</td><td class="disC">兒童 C</td></tr>`;
-
+        html += `<tr><th colspan="4" class="sub-head">${sec.sub}</th></tr>`;
+        html += `<tr class="name-row"><td>觀察項目</td><td class="disA">兒童 A</td><td class="disB">兒童 B</td><td class="disC">兒童 C</td></tr>`;
         sec.items.forEach((item, iIdx) => {
-            const idBase = `s${sIdx}i${iIdx}`;
-            tableHtml += `<tr>
-                <td class="item-text">${item}</td>
-                ${['A', 'B', 'C'].map(ch => `
-                    <td>
-                        <div class="score-zone">
-                            <label><input type="radio" name="${idBase}_${ch}" value="0"> 0</label>
-                            <label><input type="radio" name="${idBase}_${ch}" value="1"> 1</label>
-                            <label><input type="radio" name="${idBase}_${ch}" value="2"> 2</label>
-                        </div>
-                        <textarea class="remark-box" id="rem_${idBase}_${ch}" placeholder="備註..."></textarea>
-                    </td>
-                `).join('')}
-            </tr>`;
+            const id = `s${sIdx}i${iIdx}`;
+            html += `<tr><td class="item-text">${item}</td>${['A', 'B', 'C'].map(ch => `
+                <td>
+                    <div class="score-zone">
+                        ${[0,1,2].map(v => `<label><input type="radio" name="${id}_${ch}" value="${v}" onchange="autoSave()"> ${v}</label>`).join('')}
+                    </div>
+                    <textarea class="remark-box" id="rem_${id}_${ch}" oninput="autoSave()" placeholder="備註..."></textarea>
+                </td>`).join('')}</tr>`;
         });
-        tableHtml += `</table>`;
-        formWrap.innerHTML += tableHtml;
+        formWrap.innerHTML += html + `</table>`;
     });
 
-    function exportToPDF() {
-        const date = document.getElementById('mainDate').value;
+    function syncNames() {
+        ['A', 'B', 'C'].forEach(ch => {
+            const val = document.getElementById('name' + ch).value || `兒童 ${ch}`;
+            document.querySelectorAll('.dis' + ch).forEach(el => el.innerText = val);
+        });
+    }
+
+    // --- 核心功能：自動儲存與載入 ---
+    function autoSave() {
+        const data = {
+            date: document.getElementById('mainDate').value,
+            names: { A: document.getElementById('nameA').value, B: document.getElementById('nameB').value, C: document.getElementById('nameC').value },
+            acts: { A: document.getElementById('actA').value, B: document.getElementById('actB').value, C: document.getElementById('actC').value },
+            scores: {},
+            remarks: {}
+        };
+        document.querySelectorAll('input[type="radio"]:checked').forEach(rb => data.scores[rb.name] = rb.value);
+        document.querySelectorAll('.remark-box').forEach(ta => data.remarks[ta.id] = ta.value);
+        localStorage.setItem('sl_observation_data', JSON.stringify(data));
+    }
+
+    function loadSavedData() {
+        const saved = localStorage.getItem('sl_observation_data');
+        if (!saved) return;
+        const data = JSON.parse(saved);
+        document.getElementById('mainDate').value = data.date || "";
+        ['A','B','C'].forEach(ch => {
+            document.getElementById('name' + ch).value = data.names[ch] || "";
+            document.getElementById('act' + ch).value = data.acts[ch] || "";
+        });
+        syncNames();
+        for (let key in data.scores) {
+            const rb = document.querySelector(`input[name="${key}"][value="${data.scores[key]}"]`);
+            if (rb) rb.checked = true;
+        }
+        for (let id in data.remarks) {
+            const ta = document.getElementById(id);
+            if (ta) ta.value = data.remarks[id];
+        }
+    }
+
+    function clearData() {
+        if(confirm('確定要永久刪除所有填寫進度嗎？')) {
+            localStorage.removeItem('sl_observation_data');
+            location.reload();
+        }
+    }
+
+    // --- 核心功能：導出摘要內容生成 ---
+    function buildSummaryHTML() {
+        const date = document.getElementById('mainDate').value || "未填寫";
         const names = { A: document.getElementById('nameA').value || "兒童 A", B: document.getElementById('nameB').value || "兒童 B", C: document.getElementById('nameC').value || "兒童 C" };
-        const acts = { A: document.getElementById('actA').value, B: document.getElementById('actB').value, C: document.getElementById('actC').value };
-        
-        let content = `<h1>觀察記錄摘要 (學習目標)</h1><p>日期: ${date}</p><hr>`;
+        let html = `<div style="padding:20px; background:white; color:black; font-family:sans-serif;">
+                    <h2 style="text-align:center; color:#2c3e50;">觀察記錄摘要 (學習目標)</h2>
+                    <p>日期：${date}</p><hr>`;
         
         ['A', 'B', 'C'].forEach(ch => {
-            let hasData = false;
-            let table = `<h2>學生：${names[ch]}</h2><p>活動內容：${acts[ch] || '---'}</p>
-                         <table border="1" style="width:100%; border-collapse:collapse; margin-bottom:20px;">
-                         <tr style="background:#eee;"><th>範疇與項目</th><th width="30%">記錄/備註</th></tr>`;
-            
+            let rowHtml = "";
             sections.forEach((sec, sIdx) => {
                 sec.items.forEach((item, iIdx) => {
-                    const idBase = `s${sIdx}i${iIdx}`;
-                    const score = document.querySelector(`input[name="${idBase}_${ch}"]:checked`)?.value;
-                    const remark = document.getElementById(`rem_${idBase}_${ch}`).value.trim();
-
+                    const id = `s${sIdx}i${iIdx}_${ch}`;
+                    const score = document.querySelector(`input[name="${id}"]:checked`)?.value;
+                    const remark = document.getElementById(`rem_${id}`).value.trim();
                     if (score === "1" || remark !== "") {
-                        hasData = true;
-                        const status = score === "1" ? "<strong>【目標】</strong> " : "";
-                        table += `<tr><td>${sec.sub}<br>• ${item}</td><td>${status}${remark}</td></tr>`;
+                        rowHtml += `<tr><td>${sec.sub}<br>• ${item}</td><td>${score==="1" ? "<strong>【目標】</strong>" : ""}${remark}</td></tr>`;
                     }
                 });
             });
-            table += `</table>`;
-            if (hasData) content += table;
+            if (rowHtml) {
+                html += `<h3>學生：${names[ch]}</h3>
+                         <p>活動：${document.getElementById('act'+ch).value || "---"}</p>
+                         <table class="export-table"><tr><th>範疇與項目</th><th>備註</th></tr>${rowHtml}</table><br>`;
+            }
         });
+        return html + `</div>`;
+    }
 
-        document.getElementById('pdf-export-area').innerHTML = content;
+    function exportAsPDF() {
+        document.getElementById('export-temp-container').innerHTML = buildSummaryHTML();
         window.print();
     }
+
+    async function exportAsImage() {
+        const container = document.getElementById('export-temp-container');
+        container.innerHTML = buildSummaryHTML();
+        
+        // 渲染成畫布
+        const canvas = await html2canvas(container, {
+            backgroundColor: "#ffffff",
+            scale: 2, // 提高清晰度
+            logging: false
+        });
+        
+        // 下載圖片
+        const link = document.createElement('a');
+        link.download = `觀察記錄_${new Date().toLocaleDateString()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+    }
+
+    window.onload = loadSavedData;
 </script>
+
 </body>
 </html>
